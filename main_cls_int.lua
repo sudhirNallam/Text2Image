@@ -325,7 +325,7 @@ local fDx = function(x)
   else
       real_label = torch.uniform(0.7,1.2)
       fake_label = torch.uniform(0.0,0.3)
-
+  end
   input_img:copy(real_img)
   input_txt_raw:copy(real_txt)
   -- average adjacent text features in batch dimension.
@@ -409,7 +409,7 @@ local fGx = function(x)
   --Exchanging real and fake 1% times for generator
   if torch.random(1,100) == 2 then
     real_label = 0
-
+  end
   if opt.noise == 'uniform' then -- regenerate random noise
     noise_interp:uniform(-1, 1)
   elseif opt.noise == 'normal' then
