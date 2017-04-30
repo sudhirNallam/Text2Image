@@ -126,7 +126,7 @@ if opt.init_g == '' then
     conc:add(conv)
     netG:add(conc)
     netG:add(nn.CAddTable())
-    netG:add(nn.ReLU(true))
+    netG:add(nn.ReLU(true):add(nn.Dropout(0.5)))
 
   -- state size: (ngf*8) x 4 x 4
   netG:add(SpatialFullConvolution(ngf * 8, ngf * 4, 4, 4, 2, 2, 1, 1))
@@ -147,19 +147,19 @@ if opt.init_g == '' then
     conc:add(conv)
     netG:add(conc)
     netG:add(nn.CAddTable())
-    netG:add(nn.ReLU(true))
+    netG:add(nn.ReLU(true):add(nn.Dropout(0.5)))
 
   -- state size: (ngf*4) x 8 x 8
   netG:add(SpatialFullConvolution(ngf * 4, ngf * 2, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true))
+  netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true):add(nn.Dropout(0.5)))
 
   -- state size: (ngf*2) x 16 x 16
   netG:add(SpatialFullConvolution(ngf * 2, ngf, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true))
+  netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true):add(nn.Dropout(0.5)))
 
   -- state size: (ngf) x 32 x 32
   netG:add(SpatialFullConvolution(ngf, nc, 4, 4, 2, 2, 1, 1))
-  netG:add(nn.Tanh())
+  netG:add(nn.Tanh():add(nn.Dropout(0.5)))
 
   -- state size: (nc) x 64 x 64
   netG:apply(weights_init)
@@ -209,12 +209,14 @@ if opt.init_d == '' then
   netD = nn.Sequential()
   pt = nn.ParallelTable()
   pt:add(convD)
-  --pt:add(fcD)
+  --Removed adding text to discriminator
+  pt:add(fcD)
   netD:add(pt)
   netD:add(nn.JoinTable(2))
   -- state size: (ndf*8 + 128) x 4 x 4
-  --netD:add(SpatialConvolution(ndf * 8 + opt.nt, ndf * 8, 1, 1))
-  netD:add(SpatialConvolution(ndf * 8, ndf * 8, 1, 1))
+  netD:add(SpatialConvolution(ndf * 8 + opt.nt, ndf * 8, 1, 1))
+  --Removed adding text to discriminator
+  --netD:add(SpatialConvolution(ndf * 8, ndf * 8, 1, 1))
   netD:add(SpatialBatchNormalization(ndf * 8)):add(nn.LeakyReLU(0.2, true))
   netD:add(SpatialConvolution(ndf * 8, 1, 4, 4))
   netD:add(nn.Sigmoid())
@@ -316,6 +318,13 @@ local fDx = function(x)
   data_tm:reset(); data_tm:resume()
   real_img, real_txt, wrong_img, _ = data:getBatch()
   data_tm:stop()
+  --Soft Labelling for images and exchanging real and fake 1% times for discriminator
+  if torch.random(1,100) == 1 then
+      real_label = torch.uniform(0.0,0.3)
+      fake_label = torch.uniform(0.7,1.2)
+  else
+      real_label = torch.uniform(0.7,1.2)
+      fake_label = torch.uniform(0.0,0.3)
 
   input_img:copy(real_img)
   input_txt_raw:copy(real_txt)
@@ -397,6 +406,10 @@ local fGx = function(x)
 
   gradParametersG:zero()
 
+  --Exchanging real and fake 1% times for generator
+  if torch.random(1,100) == 2 then
+    real_label = 0
+
   if opt.noise == 'uniform' then -- regenerate random noise
     noise_interp:uniform(-1, 1)
   elseif opt.noise == 'normal' then
@@ -404,6 +417,7 @@ local fGx = function(x)
   end
   local fake = netG:forward{noise_interp, input_txt_interp}
   input_img_interp:copy(fake)
+  
   label_interp:fill(real_label) -- fake labels are real for generator cost
 
   local output = netD:forward{input_img_interp, input_txt_interp}
@@ -427,8 +441,10 @@ for epoch = 1, opt.niter do
   for i = 1, math.min(data:size(), opt.ntrain), opt.batchSize do
     tm:reset()
     -- (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-    optim.adam(fDx, parametersD, optimStateD)
-
+    -- Use SGD for discriminator
+    --optim.adam(fDx, parametersD, optimStateD)
+    optim.sgd(fDx, parametersD, optimStateD)
+    
     -- (2) Update G network: maximize log(D(G(z)))
     optim.adam(fGx, parametersG, optimStateG)
 
