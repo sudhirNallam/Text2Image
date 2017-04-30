@@ -126,7 +126,8 @@ if opt.init_g == '' then
     conc:add(conv)
     netG:add(conc)
     netG:add(nn.CAddTable())
-    netG:add(nn.ReLU(true):add(nn.Dropout(0.5)))
+    netG:add(nn.ReLU(true))
+    netG:add(nn.Dropout(0.5))
 
   -- state size: (ngf*8) x 4 x 4
   netG:add(SpatialFullConvolution(ngf * 8, ngf * 4, 4, 4, 2, 2, 1, 1))
@@ -147,19 +148,23 @@ if opt.init_g == '' then
     conc:add(conv)
     netG:add(conc)
     netG:add(nn.CAddTable())
-    netG:add(nn.ReLU(true):add(nn.Dropout(0.5)))
+    netG:add(nn.ReLU(true))
+    netG:add(nn.Dropout(0.5))
 
   -- state size: (ngf*4) x 8 x 8
   netG:add(SpatialFullConvolution(ngf * 4, ngf * 2, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true):add(nn.Dropout(0.5)))
+  netG:add(SpatialBatchNormalization(ngf * 2)):add(nn.ReLU(true))
+  netG:add(nn.Dropout(0.5))
 
   -- state size: (ngf*2) x 16 x 16
   netG:add(SpatialFullConvolution(ngf * 2, ngf, 4, 4, 2, 2, 1, 1))
-  netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true):add(nn.Dropout(0.5)))
+  netG:add(SpatialBatchNormalization(ngf)):add(nn.ReLU(true))
+  netG:add(nn.Dropout(0.5))
 
   -- state size: (ngf) x 32 x 32
   netG:add(SpatialFullConvolution(ngf, nc, 4, 4, 2, 2, 1, 1))
-  netG:add(nn.Tanh():add(nn.Dropout(0.5)))
+  netG:add(nn.Tanh())
+  netG:add(nn.Dropout(0.5))
 
   -- state size: (nc) x 64 x 64
   netG:apply(weights_init)
